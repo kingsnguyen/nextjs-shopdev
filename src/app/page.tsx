@@ -2,10 +2,26 @@ import Link from 'next/link';
 import ProductCard from '../components/ProductCard';
 import  prisma  from '../lib/db/prisma'
 import Image from "next/image";
+import PaginationBar from '../components/Paginationbar';
 
-export default async function Page() {
+interface HomePageProps {
+  searchParams: {page: string}
+}
+
+export default async function Page({searchParams: {page ="1"}}: HomePageProps) {
+  const currentPage = parseInt(page)
+
+  const pageSize = 2
+  const heroItemCount = 1
+
+  const totalItemCount = await prisma.product.count()
+
+  const totalPages = Math.ceil((totalItemCount -heroItemCount)/ pageSize)
+
   const products = await prisma.product.findMany({
-    orderBy: {id: "desc"}
+    orderBy: {id: "desc"},
+    skip: (currentPage -1) * pageSize + (currentPage === 1 ? 0 : heroItemCount),
+    take: pageSize + (currentPage === 1 ? heroItemCount : 0)
   })
   return (
     <div>
@@ -27,10 +43,12 @@ export default async function Page() {
         </div>
       </div>
       <div className="py-4 grid grid-cols-2 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {products.slice(1).map(product => (
+        {(currentPage === 1 ? products.slice(1) : products).map(product => (
           <ProductCard product={product} key={product.id}></ProductCard>
         ))}
       </div>
+      
+        {totalPages > 1 && (<PaginationBar currentPage={currentPage} totalPages={totalPages} />)}
       
     </div>
   );
